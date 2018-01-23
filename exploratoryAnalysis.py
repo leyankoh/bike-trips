@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 
+
 os.chdir("D:\Documents\Project\BikeTrips") 
 
 if os.path.isdir('outputs') is not True:
@@ -124,19 +125,41 @@ plt.figure(3, figsize=(20,20))
 nx.draw_networkx(G, pos, with_labels=False, node_size = 50, node_color='blue', alpha=0.5, edge_color="#9595b7")
 plt.savefig(os.path.join('outputs', 'network_graph.pdf'))
 
-# TODO: Fix edges not showing up with base map 
-# TODO: Add weights to edges
-m.drawcoastlines(linewidth=0.5)
-m.fillcontinents(color='white', lake_color='white')
+# Since the graph is cluttered, try plotting based on weights
+# To do this, start by adding counts of every unique to and from and then joining them
+nodes_weight = nodes.groupby(['from_station_id', 'to_station_id']).size()
+nodes_weight = nodes_weight.reset_index()
+nodes.drop_duplicates(inplace=True)
+
+nodes = nodes.merge(nodes_weight, how='inner', on=['from_station_id', 'to_station_id'])
+# rename gunk column
+nodes.rename(columns={0: 'weight'}, inplace=True)
+
+nodes['weight'] = (nodes['weight'] - min(nodes['weight'])) / (max(nodes['weight']) - min(nodes['weight'])) #standardise data
+
+# get all weights above a certain amount 
+nodes_filtered = nodes[(nodes['weight'] > 0.3)]
+nodes_filtered.reset_index(inplace=True)
+
+G2 = nx.Graph() # Initialise a new graph
+
+for i in range(nodes_filtered.shape[0]):
+    G2.add_edge(nodes_filtered['from_station_id'][i], nodes_filtered['to_station_id'][i], weight=nodes_filtered['weight'][i])
+    
+edges,weights = zip(*nx.get_edge_attributes(G2, 'weight').items())
+plt.figure(3, figsize=(20,20))
+nx.draw_networkx(G2, pos, with_labels=False, node_size = 50, node_color='grey', edge_color=weights, edge_alpha=0.5, edge_cmap=plt.cm.binary)
+
+plt.savefig(os.path.join('outputs', 'network_weighted.pdf'))    
+    
 plt.show()
 
-"""
-# Use this code later 
+
 #Plot bike station points on chicago census tracts map
+# TODO: make this work
 f, ax = plt.subplots(figsize=(10, 10))
 chicago.plot(color="white", ax = ax, edgecolor="#cccccc", alpha=0.5)
 ax.scatter(stations["longitude"], stations["latitude"], alpha=0.5, marker="x")
 ax.set_axis_off()
 
 plt.show()
-"""
