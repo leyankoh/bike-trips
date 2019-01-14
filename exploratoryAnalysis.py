@@ -127,6 +127,8 @@ plt.savefig(os.path.join('outputs', 'network_graph.pdf'))
 
 # Since the graph is cluttered, try plotting based on weights
 # To do this, start by adding counts of every unique to and from and then joining them
+nodes = pd.read_csv(os.path.join("outputs", "nodes.csv"), header=0, engine='python')
+
 nodes_weight = nodes.groupby(['from_station_id', 'to_station_id']).size()
 nodes_weight = nodes_weight.reset_index()
 nodes.drop_duplicates(inplace=True)
@@ -134,7 +136,10 @@ nodes.drop_duplicates(inplace=True)
 nodes = nodes.merge(nodes_weight, how='inner', on=['from_station_id', 'to_station_id'])
 # rename gunk column
 nodes.rename(columns={0: 'weight'}, inplace=True)
+nodes.drop(['Unnamed: 0'], axis=1, inplace=True)
 
+#save to a csv
+nodes.to_csv(os.path.join('outputs', 'nodes_count.csv'))
 nodes['weight'] = (nodes['weight'] - min(nodes['weight'])) / (max(nodes['weight']) - min(nodes['weight'])) #standardise data
 
 # get all weights above a certain amount 
